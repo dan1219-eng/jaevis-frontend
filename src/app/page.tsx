@@ -101,7 +101,8 @@ export default function Home() {
         throw new Error(`Supervisor request failed with status ${response.status}`);
       }
 
-      // 待機と結果の再取得
+      // Clear prompt and wait for result
+      setPrompt('');
       setTimeout(() => {
         fetchLogs().finally(() => setIsLoading(false));
       }, 8000); // 8秒待機
