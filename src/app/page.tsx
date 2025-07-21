@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction, FormEvent } from 'react';
 
 const SUPERVISOR_URL = 'https://supervisor-service-497428235894.asia-northeast1.run.app/';
 const MONITOR_URL = 'https://monitor-service-497428235894.asia-northeast1.run.app/logs';
@@ -15,6 +15,27 @@ type Log = {
 };
 
 type ServiceStatus = 'ok' | 'error' | 'loading';
+
+// --- Prop Types ---
+interface ControlPanelProps {
+  prompt: string;
+  setPrompt: Dispatch<SetStateAction<string>>;
+  handleSubmit: (e: FormEvent) => Promise<void>;
+  isLoading: boolean;
+}
+
+interface SystemStatusProps {
+  statuses: Record<string, ServiceStatus>;
+}
+
+interface LogViewerProps {
+  logs: Log[];
+  fetchLogs: () => Promise<void>;
+}
+
+interface LogItemProps {
+  log: Log;
+}
 
 // --- メインコンポーネント ---
 export default function Home() {
@@ -117,7 +138,7 @@ const Header = () => (
   </header>
 );
 
-const ControlPanel = ({ prompt, setPrompt, handleSubmit, isLoading }) => (
+const ControlPanel = ({ prompt, setPrompt, handleSubmit, isLoading }: ControlPanelProps) => (
   <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
     <h2 className="text-2xl font-semibold text-cyan-400 mb-4">指令室 (Control Panel)</h2>
     <form onSubmit={handleSubmit}>
@@ -149,7 +170,7 @@ const ControlPanel = ({ prompt, setPrompt, handleSubmit, isLoading }) => (
   </div>
 );
 
-const SystemStatus = ({ statuses }) => (
+const SystemStatus = ({ statuses }: SystemStatusProps) => (
   <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
     <h2 className="text-2xl font-semibold text-cyan-400 mb-4">システムステータス</h2>
     <ul className="space-y-3">
@@ -174,7 +195,7 @@ const SystemStatus = ({ statuses }) => (
   </div>
 );
 
-const LogViewer = ({ logs, fetchLogs }) => (
+const LogViewer = ({ logs, fetchLogs }: LogViewerProps) => (
   <div className="mt-8">
     <div className="flex justify-between items-center mb-4">
       <h2 className="text-3xl font-bold text-cyan-400">メインモニター (Log Viewer)</h2>
@@ -190,7 +211,7 @@ const LogViewer = ({ logs, fetchLogs }) => (
   </div>
 );
 
-const LogItem = ({ log }) => {
+const LogItem = ({ log }: LogItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   return (
     <div className="bg-gray-800 p-5 rounded-lg shadow-md transition hover:shadow-cyan-500/20">
