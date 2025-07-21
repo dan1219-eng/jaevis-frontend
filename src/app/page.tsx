@@ -52,7 +52,7 @@ export default function Home() {
   // --- データ取得＆状態監視 ---
   const fetchLogs = async () => {
     try {
-      const response = await fetch(`${MONITOR_URL}?limit=20`);
+      const response = await fetch(`${MONITOR_URL}?limit=20&t=${new Date().getTime()}`);
       if (!response.ok) throw new Error('Failed to fetch logs');
       const data: Log[] = await response.json();
       setLogs(data);
