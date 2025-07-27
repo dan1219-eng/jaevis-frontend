@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Dispatch, SetStateAction, FormEvent } from 'react';
 
-const SUPERVISOR_URL = 'https://jaevis-orchestrator-4mlg2xcs5q-an.a.run.app';
+const SUPERVISOR_URL = 'https://jaevis-supervisor-497428235894.asia-northeast1.run.app';
 
 // --- タイプ定義 ---
 type AiOutputs = Record<string, string>;
@@ -37,7 +37,7 @@ export default function Home() {
   // --- 状態監視 ---
   const checkServiceStatus = async () => {
     try {
-      const response = await fetch(SUPERVISOR_URL);
+      const response = await fetch(SUPERVISOR_URL, { mode: 'cors' });
       setStatuses({ supervisor: response.ok ? 'ok' : 'error' });
     } catch {
       setStatuses({ supervisor: 'error' });
