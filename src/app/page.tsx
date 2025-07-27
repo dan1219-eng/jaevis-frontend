@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Dispatch, SetStateAction, FormEvent } from 'react';
 
-const SUPERVISOR_URL = 'https://supervisor-service-497428235894.asia-northeast1.run.app/';
+const SUPERVISOR_URL = 'https://jaevis-orchestrator-4mlg2xcs5q-an.a.run.app';
 const MONITOR_URL = 'https://monitor-service-497428235894.asia-northeast1.run.app/logs';
 
 // --- タイプ定義 ---
