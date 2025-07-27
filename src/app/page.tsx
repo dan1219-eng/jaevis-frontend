@@ -37,7 +37,7 @@ export default function Home() {
   // --- 状態監視 ---
   const checkServiceStatus = async () => {
     try {
-      const response = await fetch(`${SUPERVISOR_URL}/health`); // Assuming a /health endpoint exists
+      const response = await fetch(SUPERVISOR_URL);
       setStatuses({ supervisor: response.ok ? 'ok' : 'error' });
     } catch {
       setStatuses({ supervisor: 'error' });
