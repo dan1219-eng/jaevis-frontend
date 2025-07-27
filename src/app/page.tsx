@@ -3,17 +3,9 @@
 import { useState, useEffect, Dispatch, SetStateAction, FormEvent } from 'react';
 
 const SUPERVISOR_URL = 'https://jaevis-orchestrator-4mlg2xcs5q-an.a.run.app';
-const MONITOR_URL = 'https://monitor-service-497428235894.asia-northeast1.run.app/logs';
 
 // --- タイプ定義 ---
-type Log = {
-  id: string;
-  user_prompt: string;
-  summary: string;
-  ai_outputs: Record<string, string>;
-  timestamp: string;
-};
-
+type AiOutputs = Record<string, string>;
 type ServiceStatus = 'ok' | 'error' | 'loading';
 
 // --- Prop Types ---
@@ -28,57 +20,31 @@ interface SystemStatusProps {
   statuses: Record<string, ServiceStatus>;
 }
 
-interface LogViewerProps {
-  logs: Log[];
-  fetchLogs: () => Promise<void>;
-}
-
-interface LogItemProps {
-  log: Log;
+interface ResponseViewerProps {
+  response: AiOutputs | null;
 }
 
 // --- メインコンポーネント ---
 export default function Home() {
   const [prompt, setPrompt] = useState('');
-  const [logs, setLogs] = useState<Log[]>([]);
+  const [lastResponse, setLastResponse] = useState<AiOutputs | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [statuses, setStatuses] = useState<Record<string, ServiceStatus>>({
     supervisor: 'loading',
-    orchestrator: 'loading',
-    monitor: 'loading',
   });
 
-  // --- データ取得＆状態監視 ---
-  const fetchLogs = async () => {
-    try {
-      const response = await fetch(`${MONITOR_URL}?limit=20&t=${new Date().getTime()}`);
-      if (!response.ok) throw new Error('Failed to fetch logs');
-      const data: Log[] = await response.json();
-      setLogs(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
-    }
-  };
-
+  // --- 状態監視 ---
   const checkServiceStatus = async () => {
-    const services = {
-      supervisor: 'https://supervisor-service-497428235894.asia-northeast1.run.app/health',
-      orchestrator: 'https://orchestrator-service-497428235894.asia-northeast1.run.app/health',
-      monitor: 'https://monitor-service-497428235894.asia-northeast1.run.app/logs', // /healthがないためlogsで代用
-    };
-    for (const [name, url] of Object.entries(services)) {
-      try {
-        const response = await fetch(url);
-        setStatuses((prev) => ({ ...prev, [name]: response.ok ? 'ok' : 'error' }));
-      } catch {
-        setStatuses((prev) => ({ ...prev, [name]: 'error' }));
-      }
+    try {
+      const response = await fetch(`${SUPERVISOR_URL}/health`); // Assuming a /health endpoint exists
+      setStatuses({ supervisor: response.ok ? 'ok' : 'error' });
+    } catch {
+      setStatuses({ supervisor: 'error' });
     }
   };
 
   useEffect(() => {
-    fetchLogs();
     checkServiceStatus();
   }, []);
 
@@ -89,6 +55,7 @@ export default function Home() {
 
     setIsLoading(true);
     setError(null);
+    setLastResponse(null);
 
     try {
       const response = await fetch(SUPERVISOR_URL, {
@@ -98,17 +65,17 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error(`Supervisor request failed with status ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: `Request failed with status ${response.status}` }));
+        throw new Error(errorData.error || `Request failed with status ${response.status}`);
       }
 
-      // Clear prompt and wait for result
+      const data: AiOutputs = await response.json();
+      setLastResponse(data);
       setPrompt('');
-      setTimeout(() => {
-        fetchLogs().finally(() => setIsLoading(false));
-      }, 8000); // 8秒待機
 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit prompt');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -125,7 +92,7 @@ export default function Home() {
           </div>
           <SystemStatus statuses={statuses} />
         </div>
-        <LogViewer logs={logs} fetchLogs={fetchLogs} />
+        <ResponseViewer response={lastResponse} />
       </main>
     </div>
   );
@@ -196,44 +163,17 @@ const SystemStatus = ({ statuses }: SystemStatusProps) => (
   </div>
 );
 
-const LogViewer = ({ logs, fetchLogs }: LogViewerProps) => (
-  <div className="mt-8">
-    <div className="flex justify-between items-center mb-4">
-      <h2 className="text-3xl font-bold text-cyan-400">メインモニター (Log Viewer)</h2>
-      <button onClick={fetchLogs} className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition">更新</button>
-    </div>
-    <div className="space-y-6">
-      {logs.length > 0 ? (
-        logs.map((log) => <LogItem key={log.id} log={log} />)
-      ) : (
-        <p className="text-gray-500 text-center py-8">ログがありません。</p>
-      )}
-    </div>
-  </div>
-);
+const ResponseViewer = ({ response }: ResponseViewerProps) => {
+  if (!response) return null;
 
-const LogItem = ({ log }: LogItemProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
   return (
-    <div className="bg-gray-800 p-5 rounded-lg shadow-md transition hover:shadow-cyan-500/20">
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-xs text-gray-500">{new Date(log.timestamp).toLocaleString()}</p>
-          <p className="text-gray-300 mt-2"><span className="font-bold text-cyan-400">You:</span> {log.user_prompt}</p>
-          <p className="text-gray-300 mt-1"><span className="font-bold text-green-400">J.A.E.V.I.S.:</span> {log.summary}</p>
-        </div>
-        <button onClick={() => setIsExpanded(!isExpanded)} className="text-sm text-cyan-400 hover:underline">
-          {isExpanded ? '詳細を閉じる' : '詳細表示'}
-        </button>
+    <div className="mt-8">
+      <h2 className="text-3xl font-bold text-cyan-400 mb-4">AIからの応答</h2>
+      <div className="bg-gray-800 p-5 rounded-lg shadow-md">
+        <pre className="bg-gray-900 p-3 rounded-md text-sm text-gray-300 overflow-x-auto">
+          {JSON.stringify(response, null, 2)}
+        </pre>
       </div>
-      {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-gray-700">
-          <h4 className="font-semibold text-gray-400 mb-2">AI Outputs:</h4>
-          <pre className="bg-gray-900 p-3 rounded-md text-xs text-gray-300 overflow-x-auto">
-            {JSON.stringify(log.ai_outputs, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 };
